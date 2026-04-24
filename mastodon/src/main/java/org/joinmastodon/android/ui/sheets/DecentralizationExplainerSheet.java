@@ -1,5 +1,7 @@
 package org.joinmastodon.android.ui.sheets;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.text.style.TypefaceSpan;
 import android.view.LayoutInflater;
@@ -25,5 +27,10 @@ public class DecentralizationExplainerSheet extends M3BottomSheet{
 		if(accountDomain==null)
 			accountDomain=AccountSessionManager.get(accountID).domain;
 		domain.setText(UiUtils.substituteStringWithSpan(context, R.string.handle_explanation_domain, accountDomain, new TypefaceSpan("sans-serif-medium")));
+		String finalAccountDomain=accountDomain;
+		findViewById(R.id.copy_btn).setOnClickListener(v->{
+			context.getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText(null, "@"+account.username+"@"+finalAccountDomain));
+			UiUtils.maybeShowTextCopiedToast(context);
+		});
 	}
 }
