@@ -4,12 +4,14 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewStub;
+import android.widget.TextView;
 
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.BatchRequest;
 import org.joinmastodon.android.api.requests.accounts.GetAccountEndorsements;
+import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.fragments.BaseStatusListFragment;
-import org.joinmastodon.android.fragments.FeaturedHashtagsListFragment;
 import org.joinmastodon.android.fragments.HashtagFeaturedTimelineFragment;
 import org.joinmastodon.android.fragments.ThreadFragment;
 import org.joinmastodon.android.fragments.account_list.FeaturedAccountListFragment;
@@ -34,6 +36,7 @@ import me.grishka.appkit.api.SimpleCallback;
 
 public class ProfileFeaturedFragment extends BaseStatusListFragment<SearchResult>{
 	private Account profileAccount;
+	private boolean isSelf;
 
 	public ProfileFeaturedFragment(){
 		setListLayoutId(R.layout.recycler_fragment_no_refresh);
@@ -43,6 +46,8 @@ public class ProfileFeaturedFragment extends BaseStatusListFragment<SearchResult
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
 		profileAccount=Parcels.unwrap(getArguments().getParcelable("profileAccount"));
+		isSelf=AccountSessionManager.getInstance().isSelf(accountID, profileAccount);
+		setEmptyText(isSelf ? R.string.profile_featured_empty_self : R.string.profile_featured_empty);
 	}
 
 	@Override
@@ -164,6 +169,15 @@ public class ProfileFeaturedFragment extends BaseStatusListFragment<SearchResult
 		if(holder instanceof FooterStatusDisplayItem.Holder && siblingHolder instanceof StatusDisplayItem.Holder<?> sdi && sdi.getItemID().startsWith("post_")){
 			super.drawDivider(child, bottomSibling, holder, siblingHolder, parent, c, paint);
 		}
+	}
+
+	@Override
+	protected void initializeEmptyView(View contentView){
+		ViewStub emptyStub=contentView.findViewById(R.id.empty);
+		emptyStub.setLayoutResource(R.layout.empty_with_elephant);
+		super.initializeEmptyView(contentView);
+		TextView emptySecondary=contentView.findViewById(R.id.empty_text_secondary);
+		emptySecondary.setText(isSelf ? getString(R.string.profile_featured_empty_self_description) : getString(R.string.profile_featured_empty_description, profileAccount.displayName));
 	}
 
 	private void showAllEndorsedAccounts(){

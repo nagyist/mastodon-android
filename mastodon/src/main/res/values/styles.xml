@@ -85,6 +85,7 @@
 		<item name="composePollStyleInactiveAlpha">1</item>
 
 		<item name="android:textColor">?colorM3OnSurface</item>
+		<item name="emptyStateElephantArt">@drawable/empty_state_elephant_light</item>
 	</style>
 
 	<style name="Theme.Mastodon.Dark" parent="Theme.AppKit">
@@ -172,6 +173,7 @@
 		<item name="composePollStyleInactiveAlpha">1</item>
 
 		<item name="android:textColor">?colorM3OnSurface</item>
+		<item name="emptyStateElephantArt">@drawable/empty_state_elephant_dark</item>
 	</style>
 
 	<style name="Theme.Mastodon.Light.MediumContrast">
