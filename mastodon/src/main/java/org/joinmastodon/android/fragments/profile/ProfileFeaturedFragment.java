@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.ViewStub;
 import android.widget.TextView;
 
+import org.joinmastodon.android.GlobalUserPreferences;
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.BatchRequest;
 import org.joinmastodon.android.api.requests.accounts.GetAccountEndorsements;
@@ -23,6 +24,8 @@ import org.joinmastodon.android.ui.displayitems.AccountStatusDisplayItem;
 import org.joinmastodon.android.ui.displayitems.FooterStatusDisplayItem;
 import org.joinmastodon.android.ui.displayitems.SectionHeaderStatusDisplayItem;
 import org.joinmastodon.android.ui.displayitems.StatusDisplayItem;
+import org.joinmastodon.android.ui.text.HtmlParser;
+import org.joinmastodon.android.ui.utils.UiUtils;
 import org.parceler.Parcels;
 
 import java.util.ArrayList;
@@ -177,7 +180,17 @@ public class ProfileFeaturedFragment extends BaseStatusListFragment<SearchResult
 		emptyStub.setLayoutResource(R.layout.empty_with_elephant);
 		super.initializeEmptyView(contentView);
 		TextView emptySecondary=contentView.findViewById(R.id.empty_text_secondary);
-		emptySecondary.setText(isSelf ? getString(R.string.profile_featured_empty_self_description) : getString(R.string.profile_featured_empty_description, profileAccount.displayName));
+		if(isSelf){
+			emptySecondary.setText(getString(R.string.profile_featured_empty_self_description));
+		}else{
+			String text=getString(R.string.profile_featured_empty_description, profileAccount.displayName);
+			if(GlobalUserPreferences.customEmojiInNames){
+				emptySecondary.setText(HtmlParser.parseCustomEmoji(text, profileAccount.emojis));
+				UiUtils.loadCustomEmojiInTextView(emptySecondary);
+			}else{
+				emptySecondary.setText(text);
+			}
+		}
 	}
 
 	private void showAllEndorsedAccounts(){
