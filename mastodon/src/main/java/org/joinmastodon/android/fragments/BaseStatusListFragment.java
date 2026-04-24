@@ -32,6 +32,7 @@ import org.joinmastodon.android.model.Translation;
 import org.joinmastodon.android.ui.M3AlertDialogBuilder;
 import org.joinmastodon.android.ui.PhotoLayoutHelper;
 import org.joinmastodon.android.ui.displayitems.AccountStatusDisplayItem;
+import org.joinmastodon.android.ui.displayitems.CompactHeaderStatusDisplayItem;
 import org.joinmastodon.android.ui.displayitems.GapStatusDisplayItem;
 import org.joinmastodon.android.ui.displayitems.HashtagStatusDisplayItem;
 import org.joinmastodon.android.ui.displayitems.MediaGridStatusDisplayItem;
@@ -437,6 +438,8 @@ public abstract class BaseStatusListFragment<T extends DisplayItemsParent> exten
 								}
 							}
 						}
+						if(item instanceof CompactHeaderStatusDisplayItem)
+							outRect.top=view.getTop(); // Make sure that the highlight doesn't extend into the margin between the quote and the parent post content
 						((UsableRecyclerView)list).setSelector(roundedSelector);
 					}else{
 						for(int i=0;i<list.getChildCount();i++){
