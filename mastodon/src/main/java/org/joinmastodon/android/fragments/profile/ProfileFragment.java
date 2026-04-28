@@ -13,7 +13,9 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
+import android.graphics.Canvas;
 import android.graphics.Outline;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -70,7 +72,6 @@ import org.joinmastodon.android.events.SelfAccountUpdatedEvent;
 import org.joinmastodon.android.fragments.AccountSimpleTimelineFragment;
 import org.joinmastodon.android.fragments.AddAccountToListsFragment;
 import org.joinmastodon.android.fragments.AssistContentProviderFragment;
-import org.joinmastodon.android.fragments.ComposeFragment;
 import org.joinmastodon.android.fragments.ManageFollowedHashtagsFragment;
 import org.joinmastodon.android.fragments.SavedPostsTimelineFragment;
 import org.joinmastodon.android.fragments.ScrollableToTop;
@@ -183,7 +184,6 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 
 	private String profileAccountID;
 	private boolean refreshing;
-	private View fab;
 	private WindowInsets childInsets;
 	private PhotoViewer currentPhotoViewer;
 	private ElevationOnScrollListener onScrollListener;
@@ -193,6 +193,8 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 	private HashSet<APIRequest<?>> relationshipRequests=new HashSet<>();
 	private PopupMenu buttonMenu;
 	private ArrayList<Tab> tabs=new ArrayList<>();
+	private int actionsBottomPadding;
+	private boolean actionsAreFloating;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -259,7 +261,6 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 		tabbar=content.findViewById(R.id.tabbar);
 		refreshLayout=content.findViewById(R.id.refresh_layout);
 		actionProgress=content.findViewById(R.id.action_progress);
-		fab=content.findViewById(R.id.fab);
 		countersLayout=content.findViewById(R.id.profile_counters);
 		tabsDivider=content.findViewById(R.id.tabs_divider);
 		actionButtonWrap=content.findViewById(R.id.profile_action_btn_wrap);
@@ -284,13 +285,7 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 		avatar.setOutlineProvider(OutlineProviders.roundedRect(16));
 		avatar.setClipToOutline(true);
 
-		FrameLayout sizeWrapper=new FrameLayout(getActivity()){
-			@Override
-			protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec){
-				pager.getLayoutParams().height=MeasureSpec.getSize(heightMeasureSpec)-getPaddingTop()-getPaddingBottom()-(tabbar.getVisibility()==View.GONE ? 0 : V.dp(48));
-				super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-			}
-		};
+		FrameLayout sizeWrapper=new ProfileContentView();
 
 		tabViews=new FrameLayout[3];
 		for(int i=0;i<tabViews.length;i++){
@@ -346,7 +341,6 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 		avatar.setOnClickListener(this::onAvatarClick);
 		cover.setOnClickListener(this::onCoverClick);
 		refreshLayout.setOnRefreshListener(this);
-		fab.setOnClickListener(this::onFabClick);
 		familiarFollowersRow.setOnClickListener(this::onFamiliarFollowersClick);
 
 		if(savedInstanceState!=null){
@@ -359,8 +353,6 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 			bindHeaderView();
 			dataLoaded();
 			tabLayoutMediator.attach();
-		}else{
-			fab.setVisibility(View.GONE);
 		}
 
 		followersBtn.setOnClickListener(this::onFollowersOrFollowingClick);
@@ -491,7 +483,6 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 							if(mediaTimelineFragment!=null && mediaTimelineFragment.loaded)
 								mediaTimelineFragment.onRefresh();
 						}
-						V.setVisibilityAnimated(fab, View.VISIBLE);
 					}
 				})
 				.exec(accountID);
@@ -604,13 +595,15 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 			if(Build.VERSION.SDK_INT>=29 && insets.getTappableElementInsets().bottom==0){
 				int insetBottom=insets.getSystemWindowInsetBottom();
 				childInsets=insets.inset(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(), insets.getSystemWindowInsetRight(), 0);
-				((ViewGroup.MarginLayoutParams) fab.getLayoutParams()).bottomMargin=V.dp(16)+insetBottom;
+				actionsBottomPadding=insetBottom;
 				applyChildWindowInsets();
 				insets=insets.inset(0, 0, 0, insetBottom);
 			}else{
-				((ViewGroup.MarginLayoutParams) fab.getLayoutParams()).bottomMargin=V.dp(16);
+				actionsBottomPadding=0;
 			}
 		}
+		syncScrollState();
+		content.invalidate();
 		super.onApplyWindowInsets(insets);
 	}
 
@@ -1263,6 +1256,26 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 		if((scrollY==0 && oldScrollY!=0) || (scrollY!=0 && oldScrollY==0)){
 			refreshLayout.setEnabled(scrollY==0);
 		}
+
+		int actionsY=actions.getTop()-scrollY;
+		if(actionsY>scrollView.getHeight()-actions.getHeight()-actionsBottomPadding){
+			actions.setTranslationY(-actionsY+scrollView.getHeight()-actions.getHeight()-actionsBottomPadding);
+			if(!actionsAreFloating){
+				actionsAreFloating=true;
+				actions.setElevation(V.dp(5));
+				int bgColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Background);
+				actions.setBackgroundColor(bgColor);
+				content.invalidate();
+			}
+		}else{
+			actions.setTranslationY(0);
+			if(actionsAreFloating){
+				actionsAreFloating=false;
+				actions.setElevation(0);
+				actions.setBackground(null);
+				content.invalidate();
+			}
+		}
 	}
 
 	private Fragment getFragmentForPage(int page){
@@ -1334,15 +1347,6 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 			return;
 		currentPhotoViewer=new PhotoViewer(getActivity(), null, createFakeAttachments(account.header, drawable), 0,
 				null, accountID, new SingleImagePhotoViewerListener(cover, cover, null, this, ()->currentPhotoViewer=null, ()->drawable, ()->avatarBorder.setTranslationZ(2), ()->avatarBorder.setTranslationZ(0)));
-	}
-
-	private void onFabClick(View v){
-		Bundle args=new Bundle();
-		args.putString("account", accountID);
-		if(!AccountSessionManager.getInstance().isSelf(accountID, account)){
-			args.putString("prefilledText", '@'+account.acct+' ');
-		}
-		Nav.go(getActivity(), ComposeFragment.class, args);
 	}
 
 	private void onFamiliarFollowersClick(View v){
@@ -1440,6 +1444,29 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 		public Tab(Fragment fragment, String title){
 			this.fragment=fragment;
 			this.title=title;
+		}
+	}
+
+	private class ProfileContentView extends FrameLayout{
+		private Paint bottomInsetPaint=new Paint();
+
+		public ProfileContentView(){
+			super(ProfileFragment.this.getActivity());
+			bottomInsetPaint.setColor(UiUtils.getThemeColor(getContext(), R.attr.colorM3Background));
+		}
+
+		@Override
+		protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec){
+			pager.getLayoutParams().height=MeasureSpec.getSize(heightMeasureSpec)-getPaddingTop()-getPaddingBottom()-(tabbar.getVisibility()==View.GONE ? 0 : V.dp(48));
+			super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+		}
+
+		@Override
+		protected void dispatchDraw(@NonNull Canvas canvas){
+			super.dispatchDraw(canvas);
+			if(actionsAreFloating && actionsBottomPadding>0){
+				canvas.drawRect(0, getHeight()-actionsBottomPadding, getWidth(), getHeight(), bottomInsetPaint);
+			}
 		}
 	}
 }
