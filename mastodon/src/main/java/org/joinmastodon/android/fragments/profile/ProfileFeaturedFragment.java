@@ -40,6 +40,7 @@ import me.grishka.appkit.api.SimpleCallback;
 public class ProfileFeaturedFragment extends BaseStatusListFragment<SearchResult>{
 	private Account profileAccount;
 	private boolean isSelf;
+	private boolean hasMoreFeaturedAccounts;
 
 	public ProfileFeaturedFragment(){
 		setListLayoutId(R.layout.recycler_fragment_no_refresh);
@@ -65,7 +66,7 @@ public class ProfileFeaturedFragment extends BaseStatusListFragment<SearchResult
 				case ACCOUNT -> R.string.profile_endorsed_accounts;
 				case HASHTAG, STATUS -> throw new IllegalStateException();
 			}), getString(R.string.view_all), switch(s.type){
-				case ACCOUNT -> (Runnable)this::showAllEndorsedAccounts;
+				case ACCOUNT -> hasMoreFeaturedAccounts ? (Runnable)this::showAllEndorsedAccounts : null;
 				case HASHTAG, STATUS -> throw new IllegalStateException();
 			}));
 		}
@@ -136,6 +137,7 @@ public class ProfileFeaturedFragment extends BaseStatusListFragment<SearchResult
 							res.firstInSection=(i==0);
 							results.add(res);
 						}
+						hasMoreFeaturedAccounts=accounts.nextPageUri!=null;
 						onDataLoaded(results, false);
 					}
 				})
