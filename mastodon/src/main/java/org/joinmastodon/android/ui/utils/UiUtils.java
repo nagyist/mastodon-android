@@ -627,23 +627,26 @@ public class UiUtils{
 			delete.run();
 	}
 
-	public static void setRelationshipToActionButtonM3(Relationship relationship, Account account, Button button){
+	public static void setRelationshipToActionButton(Relationship relationship, Account account, Button button, boolean compact){
 		int styleRes;
 		if(relationship.blocking){
-			button.setText(R.string.button_blocked);
-			styleRes=R.style.Widget_Mastodon_M3_Button_Tonal_Error;
-		}else if(relationship.blockedBy){
+			button.setText(R.string.unblock);
+			styleRes=R.style.Widget_Mastodon_M3_Button_Outlined_Neutral;
+		}else if(!relationship.following && !relationship.followedBy && !relationship.requested){
 			button.setText(R.string.button_follow);
 			styleRes=R.style.Widget_Mastodon_M3_Button_Filled;
-		}else if(relationship.requested){
-			button.setText(R.string.button_follow_pending);
-			styleRes=R.style.Widget_Mastodon_M3_Button_Tonal;
-		}else if(!relationship.following){
-			button.setText(relationship.followedBy ? R.string.follow_back : R.string.button_follow);
+		}else if(!relationship.following && !relationship.requested && account.locked){
+			button.setText(compact ? R.string.request_to_follow_short : R.string.request_to_follow);
+			styleRes=R.style.Widget_Mastodon_M3_Button_Filled;
+		}else if(!relationship.following && relationship.requested){
+			button.setText(compact ? R.string.cancel_follow_request_short : R.string.cancel_follow_request);
+			styleRes=R.style.Widget_Mastodon_M3_Button_Outlined_Neutral;
+		}else if(!relationship.following && relationship.followedBy){
+			button.setText(R.string.follow_back);
 			styleRes=R.style.Widget_Mastodon_M3_Button_Filled;
 		}else{
-			button.setText(R.string.button_following);
-			styleRes=R.style.Widget_Mastodon_M3_Button_Tonal;
+			button.setText(R.string.unfollow);
+			styleRes=R.style.Widget_Mastodon_M3_Button_Outlined_Neutral;
 		}
 
 		button.setEnabled(relationship.blocking || (!relationship.blockedBy && !account.suspended));

@@ -1088,44 +1088,12 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 		relationshipRequests.add(followersReq);
 	}
 
-	private void setRelationshipToActionButton(Relationship relationship, Button button){
-		// TODO move this to UiUtils if/when we change the styles of these buttons in the rest of the app
-		int styleRes;
-		if(relationship.blocking){
-			button.setText(R.string.unblock);
-			styleRes=R.style.Widget_Mastodon_M3_Button_Outlined_Neutral;
-		}else if(!relationship.following && !relationship.followedBy && !relationship.requested){
-			button.setText(R.string.button_follow);
-			styleRes=R.style.Widget_Mastodon_M3_Button_Filled;
-		}else if(!relationship.following && !relationship.requested && account.locked){
-			button.setText(R.string.request_to_follow);
-			styleRes=R.style.Widget_Mastodon_M3_Button_Filled;
-		}else if(!relationship.following && relationship.requested){
-			button.setText(R.string.cancel_follow_request);
-			styleRes=R.style.Widget_Mastodon_M3_Button_Outlined_Neutral;
-		}else if(!relationship.following && relationship.followedBy){
-			button.setText(R.string.follow_back);
-			styleRes=R.style.Widget_Mastodon_M3_Button_Filled;
-		}else{
-			button.setText(R.string.unfollow);
-			styleRes=R.style.Widget_Mastodon_M3_Button_Outlined_Neutral;
-		}
-
-		button.setEnabled(relationship.blocking || (!relationship.blockedBy && !account.suspended));
-		TypedArray ta=button.getContext().obtainStyledAttributes(styleRes, new int[]{android.R.attr.background});
-		button.setBackground(ta.getDrawable(0));
-		ta.recycle();
-		ta=button.getContext().obtainStyledAttributes(styleRes, new int[]{android.R.attr.textColor});
-		button.setTextColor(ta.getColorStateList(0));
-		ta.recycle();
-	}
-
 	private void updateRelationship(){
 		if(getActivity()==null)
 			return;
 		invalidateOptionsMenu();
 		actionButton.setVisibility(View.VISIBLE);
-		setRelationshipToActionButton(relationship, actionButton);
+		UiUtils.setRelationshipToActionButton(relationship, account, actionButton, false);
 		actionProgress.setIndeterminateTintList(actionButton.getTextColors());
 		updateHeaderBadges();
 		if(relationship.following){
